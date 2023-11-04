@@ -1,142 +1,190 @@
-import React from 'react';
 import axios from "axios";
 import { API_URL } from "../index";
+import React from 'react';
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background,
+  MarkerType,
+  Position,
+} from 'reactflow';
+import CustomNode from './CustomNode';
 
-import {
-  GraphView, // required
-  Edge, // optional
-  Node, // optional
-  BwdlTransformer, // optional, Example JSON transformer
-  GraphUtils // optional, useful utility functions
-} from 'react-digraph';
+import 'reactflow/dist/style.css';
+import './overview.css';
 
-const GraphConfig = {
-  NodeTypes: {
-    empty: { // required to show empty nodes
-      typeText: "None",
-      shapeId: "#empty", // relates to the type property of a node
-      shape: (
-        <symbol viewBox="0 0 100 100" id="empty" key="0">
-          <circle cx="50" cy="50" r="45"></circle>
-        </symbol>
-      )
+const nodeTypes = {
+  custom: CustomNode,
+};
+
+const minimapStyle = {
+  height: 120,
+};
+
+
+
+
+const initialNodes = [
+  {
+    id: '1',
+    type: 'input',
+    data: {
+      label: 'Input Node',
     },
-    custom: { // required to show empty nodes
-      typeText: "Custom",
-      shapeId: "#custom", // relates to the type property of a node
-      shape: (
-        <symbol viewBox="0 0 50 25" id="custom" key="0">
-          <ellipse cx="50" cy="25" rx="50" ry="25"></ellipse>
-        </symbol>
-      )
-    }
+    position: { x: 250, y: 0 },
   },
-  NodeSubtypes: {},
-  EdgeTypes: {
-    emptyEdge: {  // required to show empty edges
-      shapeId: "#emptyEdge",
-      shape: (
-        <symbol viewBox="0 0 50 50" id="emptyEdge" key="0">
-          <circle cx="25" cy="25" r="8" fill="currentColor"> </circle>
-        </symbol>
-      )
-    }
-  }
-}
+  {
+    id: '2',
+    data: {
+      label: 'Default Node',
+    },
+    position: { x: 100, y: 100 },
+  },
+  {
+    id: '3',
+    type: 'output',
+    data: {
+      label: 'Output Node',
+    },
+    position: { x: 400, y: 100 },
+  },
+  {
+    id: '4',
+    type: 'custom',
+    position: { x: 100, y: 200 },
+    data: {
+      selects: {
+        'handle-0': 'smoothstep',
+        'handle-1': 'smoothstep',
+      },
+    },
+  },
+  {
+    id: '5',
+    type: 'output',
+    data: {
+      label: 'custom style',
+    },
+    className: 'circle',
+    style: {
+      background: '#2B6CB0',
+      color: 'white',
+    },
+    position: { x: 400, y: 200 },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+  },
+  {
+    id: '6',
+    type: 'output',
+    style: {
+      background: '#63B3ED',
+      color: 'white',
+      width: 100,
+    },
+    data: {
+      label: 'Node',
+    },
+    position: { x: 400, y: 325 },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+  },
+  {
+    id: '7',
+    type: 'default',
+    className: 'annotation',
+    data: {
+      label: (
+        <>
+          On the bottom left you see the <strong>Controls</strong> and the bottom right the{' '}
+          <strong>MiniMap</strong>. This is also just a node 🥳
+        </>
+      ),
+    },
+    draggable: false,
+    selectable: false,
+    position: { x: 150, y: 400 },
+  },
+];
 
-const NODE_KEY = "id";
+const initialEdges = [
+  { id: 'e1-2', source: '1', target: '2', label: 'this is an edge label' },
+  { id: 'e1-3', source: '1', target: '3', animated: true },
+  {
+    id: 'e4-5',
+    source: '4',
+    target: '5',
+    type: 'smoothstep',
+    sourceHandle: 'handle-0',
+    data: {
+      selectIndex: 0,
+    },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+    },
+  },
+  {
+    id: 'e4-6',
+    source: '4',
+    target: '6',
+    type: 'smoothstep',
+    sourceHandle: 'handle-1',
+    data: {
+      selectIndex: 1,
+    },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+    },
+  },
+];
+
 
 export default class Test extends React.Component {
 
   constructor(props) {
     super(props);
     this.state = {
-      graph_data: {
-        "nodes": [
-          {
-            "id": 1,
-            "title": "Node A",
-            "x": 258.3976135253906,
-            "y": 331.9783248901367,
-            "type": "empty"
-          },
-          {
-            "id": 2,
-            "title": "Node B",
-            "x": 593.9393920898438,
-            "y": 260.6060791015625,
-            "type": "empty"
-          },
-          {
-            "id": 3,
-            "title": "Node C",
-            "x": 237.5757598876953,
-            "y": 61.81818389892578,
-            "type": "custom"
-          },
-          {
-            "id": 4,
-            "title": "Node C",
-            "x": 600.5757598876953,
-            "y": 600.81818389892578,
-            "type": "custom"
-          }
-        ],
-        "edges": [
-          {
-            "source": 1,
-            "target": 2,
-            "type": "emptyEdge"
-          },
-          {
-            "source": 2,
-            "target": 4,
-            "type": "emptyEdge"
-          }
-        ]
-      },
-      selected: {}
+      graphData: null
     }
   }
 
   componentDidMount() {
     axios.get(API_URL + "test")
       .then((response) => {
-        this.setState({ graph_data: response.data });
+        this.setState({
+          graphData : response.data
+        });
         console.log(response.data);
       });
 
   }
 
   render() {
+    if (this.state.graphData)
+      return (
+            <ReactFlow
+              nodes={this.state.graphData.nodes}
+              edges={this.state.graphData.edges}
+              fitView
+              attributionPosition="top-right"
+              nodeTypes={nodeTypes}
+            >
+              <MiniMap style={minimapStyle} zoomable pannable />
+              <Controls />
+              <Background color="#aaa" gap={16} />
+            </ReactFlow>
 
-    const NodeTypes = GraphConfig.NodeTypes;
-    const NodeSubtypes = GraphConfig.NodeSubtypes;
-    const EdgeTypes = GraphConfig.EdgeTypes;
-
-    return (
-      <div id='graph'>
-        {
-          this.state.graph_data
-          &&
-          <GraphView ref='GraphView'
-            nodeKey={NODE_KEY}
-            nodes={this.state.graph_data.nodes}
-            edges={this.state.graph_data.edges}
-            selected={this.state.selected}
-            nodeTypes={NodeTypes}
-            nodeSubtypes={NodeSubtypes}
-            edgeTypes={EdgeTypes}
-            allowMultiselect={true} // true by default, set to false to disable multi select.
-            onSelect={this.onSelect}
-            onCreateNode={this.onCreateNode}
-            onUpdateNode={this.onUpdateNode}
-            onDeleteNode={this.onDeleteNode}
-            onCreateEdge={this.onCreateEdge}
-            onSwapEdge={this.onSwapEdge}
-            onDeleteEdge={this.onDeleteEdge} />
-        }
-      </div>
-    );
+      );
+    else
+        return (
+          <div>
+            Problems with data from server
+          </div>
+      
+          );
   }
+
+
+
+
 }
