@@ -15,6 +15,9 @@ djangorestframework
 jsonpickle
 
 
+#### To update DB after changing it in code:
+python manage.py install_labels
+
 #### To run:
 Чтобы запустить сервер: (Находясь в папке проекта)
 cd server

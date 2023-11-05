@@ -6,7 +6,7 @@ function App() {
   
 
   return (
-    <div style={{ height: 500 }}>
+    <div style={{ height: 700 }}>
       <Test />
     </div>
 

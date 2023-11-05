@@ -22,7 +22,7 @@ const minimapStyle = {
 };
 
 
-
+/*
 
 const initialNodes = [
   {
@@ -137,6 +137,7 @@ const initialEdges = [
     },
   },
 ];
+*/
 
 
 export default class Test extends React.Component {
@@ -144,44 +145,71 @@ export default class Test extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      graphData: null
+      nodes: null,
+      edges: null
     }
   }
 
   componentDidMount() {
     axios.get(API_URL + "test")
       .then((response) => {
-        this.setState({
-          graphData : response.data
+        let data = JSON.parse(response.data);
+        let nodes = data["nodes"].map((node) => {
+          let new_node = node.map((el) => {
+            if ((typeof el[1]) === (typeof [])) {
+              return [el[0], Object.fromEntries(el[1])];
+            }
+            else return el;
+          });
+          return Object.fromEntries(new_node);
+        })
+        let edges = data["links"].map((edge) => {
+          let new_edge = edge.map((el) => {
+            if ((typeof el[1]) === (typeof [])) {
+              return [el[0], Object.fromEntries(el[1])];
+            }
+            else return el;
+          });
+          return Object.fromEntries(new_edge);
+        })
+
+        console.log({
+          nodes: nodes,
+          edges: edges
         });
-        console.log(response.data);
+
+        this.setState({
+          nodes: nodes,
+          edges: edges
+        });
       });
 
   }
 
   render() {
-    if (this.state.graphData)
+    if (this.state.nodes != null && this.state.edges != null)
       return (
-            <ReactFlow
-              nodes={this.state.graphData.nodes}
-              edges={this.state.graphData.edges}
-              fitView
-              attributionPosition="top-right"
-              nodeTypes={nodeTypes}
-            >
-              <MiniMap style={minimapStyle} zoomable pannable />
-              <Controls />
-              <Background color="#aaa" gap={16} />
-            </ReactFlow>
+
+        <ReactFlow
+          nodes={this.state.nodes}
+          edges={this.state.edges}
+          fitView
+          attributionPosition="top-right"
+          nodeTypes={nodeTypes}
+        >
+          <MiniMap style={minimapStyle} zoomable pannable />
+          <Controls />
+          <Background color="#aaa" gap={16} />
+        </ReactFlow>
 
       );
     else
-        return (
-          <div>
-            Problems with data from server
-          </div>
-      
-          );
+      return (
+        <div>
+          Getting data from server...
+        </div>
+
+      );
   }
 
 
