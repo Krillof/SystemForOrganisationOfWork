@@ -1,66 +1,21 @@
 from typing import Any
-from neomodel import StructuredNode, StringProperty, RelationshipTo, StructuredRel, ZeroOrMore, IntegerProperty
+from neomodel import *
 import jsonpickle
 from jsonpickle.handlers import BaseHandler, register
+import datetime
+from enum import Enum
 
+
+
+
+### Classes for jsonification
 
 class JsonFlattened:
   def flatten(self):
-    raise NotImplementedError()
-
-class ParticipantRel(StructuredRel, JsonFlattened):
-  role = StringProperty()
-
-  def flatten(self):
-    return {"source": str(self.start_node().element_id), "target": str(self.end_node().element_id), "role": self.role}
-
-class User(StructuredNode, JsonFlattened):
-  login = StringProperty()
-  password = StringProperty()
-  science_groups = RelationshipTo('ScienceGroup', 'PARTICIPANT', model=ParticipantRel, cardinality=ZeroOrMore)
-
-  def flatten(self): 
-    return {"id": str(self.element_id), "login": self.login, "password": self.password}
-
-class ScienceGroup(StructuredNode, JsonFlattened):
-  title = StringProperty()
-  participants = RelationshipTo('User', 'PARTICIPANT', model=ParticipantRel, cardinality=ZeroOrMore)
-
-  def flatten(self):
-    return {"id": str(self.element_id), "title": self.title}
+    return []
   
 
-class TaskThemeRel(StructuredRel, JsonFlattened):
-  def flatten(self):
-    return [["id" , str(self.element_id)], ["source",str(self.start_node().element_id)], ["target", str(self.end_node().element_id)]]
-
-
-class Task(StructuredNode, JsonFlattened):
-  title = StringProperty()
-  x = IntegerProperty()
-  y = IntegerProperty()
-
-  def flatten(self):
-    return [["id", str(self.element_id)],["data",[["label", self.title]] ] , ["position",[["x",self.x], ["y",self.y]]]]
-
-
-class GlobalTheme(StructuredNode, JsonFlattened):
-  title = StringProperty()
-  x = IntegerProperty()
-  y = IntegerProperty()
-  tasks = RelationshipTo('Task', 'TASK', model=TaskThemeRel, cardinality=ZeroOrMore)
-
-
-  def flatten(self):
-    return [["id", str(self.element_id)],["data",[["label", self.title]] ] , ["position",[["x",self.x], ["y",self.y]]]]
-
-
-@register(ParticipantRel, base=True)
-@register(User, base=True)
-@register(ScienceGroup, base=True)
-@register(TaskThemeRel, base=True)
-@register(Task, base=True)
-@register(GlobalTheme, base=True)
+@register(JsonFlattened, base=True)
 class ComplexObjectToJsonHandler(BaseHandler):
   def flatten(self, obj, data):
     if isinstance(obj, JsonFlattened):
@@ -72,3 +27,199 @@ class ComplexObjectToJsonHandler(BaseHandler):
   def restore(self, data):
     obj = [] # TODO: restore object from Json
     return []
+
+
+
+
+
+
+
+
+
+
+### Classes, that will be parents for classes below them
+
+class RelationFlattened(StructuredRel, JsonFlattened):
+  def flatten(self):
+    return [
+      ["id" , str(self.element_id)],
+      ["source", str(self.start_node().element_id)],
+      ["target", str(self.end_node().element_id)]
+    ]
+  
+class DatedRel(RelationFlattened):
+  created_date = DateProperty()
+
+  def flatten(self):
+    return [
+      ["created_date", str(self.created_date)]
+    ] + super().flatten()
+
+class RoledRel(RelationFlattened):
+  role = StringProperty()
+
+  def flatten(self):
+    return [
+      ["role", self.role]
+    ] + super().flatten()
+
+class NodeFlattened(StructuredNode, JsonFlattened):
+  def flatten(self):
+    return [
+        ["id" , str(self.element_id)]
+      ] + super().flatten()
+
+class PositionedNodeFlattened(NodeFlattened):
+  x = IntegerProperty()
+  y = IntegerProperty()
+
+  def flatten(self):
+    return [
+      ["position",
+        [["x",self.x], ["y",self.y]]
+      ]
+    ] + super().flatten()
+
+class NodeWithDatedRel(StructuredNode):
+  
+  def get_dated_relationship(self):
+    raise NotImplementedError()
+
+  def connect_and_write_creation_date(self, node):
+    rel = self.get_dated_relationship().connect(node)
+    rel.created_date = datetime.date.today()
+    self.save()
+    node.save()
+    return rel.save()
+
+
+class Role(Enum):
+  Employee = "Employee"
+
+
+class NodeWithRoledRel(StructuredNode):
+  
+  def get_roled_relationship(self):
+    raise NotImplementedError()
+
+  def connect_and_write_role(self, node, role):
+    rel = self.get_roled_relationship().connect(node)
+    rel.role = role.value
+    self.save()
+    node.save()
+    return rel.save()
+
+
+
+
+
+
+
+
+
+
+
+### Connection classes
+
+
+class ParticipantRel(RoledRel):
+  pass
+
+class GlobalThemeScienceGroupRel(DatedRel):
+  pass
+
+class TaskGlobalThemeRel(DatedRel):
+  pass
+
+class ArticleTaskRel(DatedRel):
+  pass
+
+
+
+
+
+
+
+### Database entities classes
+
+
+class ScienceGroup(PositionedNodeFlattened):
+  title = StringProperty()
+  def flatten(self):
+    return [
+      ["id" , str(self.element_id)], 
+      ["data",
+          [["label", self.title]] 
+      ],
+      ["title",self.title]
+    ] + super().flatten()
+
+class User(NodeWithRoledRel, PositionedNodeFlattened):
+  login = StringProperty()
+  password = StringProperty()
+  science_groups = RelationshipTo('ScienceGroup', 'PARTICIPANT', model=ParticipantRel, cardinality=ZeroOrMore)
+
+  def get_roled_relationship(self):
+    return self.science_groups
+
+  def flatten(self): 
+    return [
+      ["id" , str(self.element_id)], 
+      ["data",
+          [["label", self.login]] 
+      ],
+      ["login", self.login],
+      ["password", self.password],
+    ] + PositionedNodeFlattened.flatten(self)
+  
+class GlobalTheme(NodeWithDatedRel, PositionedNodeFlattened):
+  title = StringProperty()
+  science_group = RelationshipTo('ScienceGroup', 'GLOBAL_THEME', model=GlobalThemeScienceGroupRel, cardinality=ZeroOrOne)
+
+  def get_dated_relationship(self):
+    return self.science_group
+  
+  def flatten(self):
+    return [
+        ["id", str(self.element_id)],
+        ["data",
+          [["label", self.title]] 
+        ]
+      ] + PositionedNodeFlattened.flatten(self)
+
+class Task(NodeWithDatedRel, PositionedNodeFlattened):
+  title = StringProperty()
+  global_theme = RelationshipTo('GlobalTheme', 'TASK', model=TaskGlobalThemeRel, cardinality=ZeroOrMore)
+
+  def get_dated_relationship(self):
+    return self.global_theme
+  
+  def flatten(self):
+    return [
+        ["id", str(self.element_id)],
+        ["data",
+          [["label", self.title]] 
+        ] 
+       ] + PositionedNodeFlattened.flatten(self)
+
+class Article(NodeWithDatedRel, PositionedNodeFlattened):
+  doi = StringProperty()
+  citations = IntegerProperty()
+  accesses = IntegerProperty()
+  tasks = RelationshipTo('Task', 'ARTICLE_FOR', model=ArticleTaskRel, cardinality=ZeroOrMore)
+
+  def get_dated_relationship(self):
+    return self.tasks
+
+  def flatten(self):
+    return [
+        ["id", str(self.element_id)],
+        ["data",
+          [
+            ["label", self.doi]
+          ] 
+        ] ,
+        ["doi", self.doi],
+        ["citations", self.citations],
+        ["accesses", self.accesses]
+      ] + PositionedNodeFlattened.flatten(self)
