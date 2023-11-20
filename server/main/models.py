@@ -4,15 +4,14 @@ import jsonpickle
 from jsonpickle.handlers import BaseHandler, register
 import datetime
 from enum import Enum
-
-
+import subprocess
 
 
 ### Classes for jsonification
 
 class JsonFlattened:
   def flatten(self):
-    return []
+    return {}
   
 
 @register(JsonFlattened, base=True)
@@ -41,44 +40,45 @@ class ComplexObjectToJsonHandler(BaseHandler):
 
 class RelationFlattened(StructuredRel, JsonFlattened):
   def flatten(self):
-    return [
-      ["id" , str(self.element_id)],
-      ["source", str(self.start_node().element_id)],
-      ["target", str(self.end_node().element_id)]
-    ]
+    return {
+      "id":str(self.element_id),
+      "source":str(self.start_node().element_id),
+      "target": str(self.end_node().element_id),
+    }
   
 class DatedRel(RelationFlattened):
   created_date = DateProperty()
 
   def flatten(self):
-    return [
-      ["created_date", str(self.created_date)]
-    ] + super().flatten()
+    return {
+      "created_date": str(self.created_date),
+    } | super().flatten()
 
 class RoledRel(RelationFlattened):
   role = StringProperty()
 
   def flatten(self):
-    return [
-      ["role", self.role]
-    ] + super().flatten()
+    return {
+      "role": self.role,
+    } | super().flatten()
 
 class NodeFlattened(StructuredNode, JsonFlattened):
   def flatten(self):
-    return [
-        ["id" , str(self.element_id)]
-      ] + super().flatten()
+    return {
+      "id" : str(self.element_id)
+    } | super().flatten()
 
 class PositionedNodeFlattened(NodeFlattened):
   x = IntegerProperty()
   y = IntegerProperty()
 
   def flatten(self):
-    return [
-      ["position",
-        [["x",self.x], ["y",self.y]]
-      ]
-    ] + super().flatten()
+    return {
+      "position": {
+          "x": self.x,
+          "y": self.y,
+      }
+    } | super().flatten()
 
 class NodeWithDatedRel(StructuredNode):
   
@@ -146,13 +146,13 @@ class ArticleTaskRel(DatedRel):
 class ScienceGroup(PositionedNodeFlattened):
   title = StringProperty()
   def flatten(self):
-    return [
-      ["id" , str(self.element_id)], 
-      ["data",
-          [["label", self.title]] 
-      ],
-      ["title",self.title]
-    ] + super().flatten()
+    return {
+      "id" : str(self.element_id),
+      "data" : {
+        "label": self.title,
+      },
+      "title" : self.title,
+    } | super().flatten()
 
 class User(NodeWithRoledRel, PositionedNodeFlattened):
   login = StringProperty()
@@ -163,14 +163,14 @@ class User(NodeWithRoledRel, PositionedNodeFlattened):
     return self.science_groups
 
   def flatten(self): 
-    return [
-      ["id" , str(self.element_id)], 
-      ["data",
-          [["label", self.login]] 
-      ],
-      ["login", self.login],
-      ["password", self.password],
-    ] + PositionedNodeFlattened.flatten(self)
+    return {
+      "id" : str(self.element_id),
+      "data" : {
+        "label" : self.login,
+      },
+      "login" : self.login,
+      "password" : self.password
+    } | PositionedNodeFlattened.flatten(self)
   
 class GlobalTheme(NodeWithDatedRel, PositionedNodeFlattened):
   title = StringProperty()
@@ -180,12 +180,12 @@ class GlobalTheme(NodeWithDatedRel, PositionedNodeFlattened):
     return self.science_group
   
   def flatten(self):
-    return [
-        ["id", str(self.element_id)],
-        ["data",
-          [["label", self.title]] 
-        ]
-      ] + PositionedNodeFlattened.flatten(self)
+    return {
+      "id" : str(self.element_id),
+      "data" : {
+        "label", self.title,
+      },
+    } | PositionedNodeFlattened.flatten(self)
 
 class Task(NodeWithDatedRel, PositionedNodeFlattened):
   title = StringProperty()
@@ -195,12 +195,14 @@ class Task(NodeWithDatedRel, PositionedNodeFlattened):
     return self.global_theme
   
   def flatten(self):
-    return [
-        ["id", str(self.element_id)],
-        ["data",
-          [["label", self.title]] 
-        ] 
-       ] + PositionedNodeFlattened.flatten(self)
+    return {
+      "id" : str(self.element_id),
+      "data" : {
+        "label": self.title,
+      },
+    } | PositionedNodeFlattened.flatten(self)
+
+
 
 class Article(NodeWithDatedRel, PositionedNodeFlattened):
   doi = StringProperty()
@@ -210,16 +212,46 @@ class Article(NodeWithDatedRel, PositionedNodeFlattened):
 
   def get_dated_relationship(self):
     return self.tasks
+  
+  class ArticleData:
+    def __init__(self, str):
+      str_parts = str.split()
+      self.ciations_number = int(str_parts[0])
+      self.accesses_number = int(str_parts[1])
 
+  def get_article_data(self):
+    data = None
+    with subprocess.Popen(["python", "./article_reader.py", self.doi],stdout=subprocess.PIPE) as res:
+      stdout = res.stdout.readline()
+      if stdout =="":
+        raise Exception("Problem with article reader: " + res.stderr.readline())
+      data = Article.ArticleData(stdout)
+    return data
+
+  
   def flatten(self):
-    return [
-        ["id", str(self.element_id)],
-        ["data",
-          [
-            ["label", self.doi]
-          ] 
-        ] ,
-        ["doi", self.doi],
-        ["citations", self.citations],
-        ["accesses", self.accesses]
-      ] + PositionedNodeFlattened.flatten(self)
+
+    res = {
+      "id" : str(self.element_id),
+      "data" : {
+        "label" : self.doi,
+      },
+      "doi" : self.doi,
+    }
+
+    try:
+      # TODO: Переделать, чтобы запросы были реже
+      # data = self.get_article_data()
+      # res += [["citations", data.ciations_number]]
+      # res += [["accesses", data.accesses_number]]
+
+      res = res | {
+        "citations" : 1, 
+        "accesses" : 20,
+      }
+    except Exception as ex:
+      res = res | {
+        "error" : str(ex),
+      }
+
+    return res | PositionedNodeFlattened.flatten(self)

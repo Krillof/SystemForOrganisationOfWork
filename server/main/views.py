@@ -34,3 +34,25 @@ def api_test(request):
     
     
     return Response(jsonpickle.encode(obj))
+
+
+@api_view(['POST'])
+def enter(request):
+    message = ""
+    login = request.POST.login
+    password = request.POST.password
+
+    # TODO: check login, password, and, especially, use something to hash password
+
+    return Response(jsonpickle.encode({
+        "message" : message
+    }))
+
+
+@api_view(['POST'])
+def register(request):
+    message = ""
+
+    return Response(jsonpickle.encode({
+        "message" : message
+    }))

@@ -1,5 +1,5 @@
-Т.к. мы используем Neo4j, то при изменении модели в коде нужно вводить
-python manage.py install_labels
+University project.
+
 
 ########### Neo4j
 Запустите БД Neo4j

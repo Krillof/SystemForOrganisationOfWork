@@ -22,5 +22,7 @@ from main import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path(r'^api/test', views.api_test)
+    re_path(r'^api/test', views.api_test),
+    re_path(r'^api/enter', views.enter),
+    re_path(r'^api/register', views.register),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -37,7 +37,7 @@ class MainConfig(AppConfig):
             t1.connect_and_write_creation_date(gt1)
             t2 = Task(title="Task 2", x=600, y=100).save()
             t2.connect_and_write_creation_date(gt1)
-            art1 = Article(doi="abc", citations=100, accesses=500, x=800, y=100).save()
+            art1 = Article(doi="https://doi.org/10.3390/membranes13050503", citations=100, accesses=500, x=800, y=100).save()
             art1.connect_and_write_creation_date(t2)
 
 
