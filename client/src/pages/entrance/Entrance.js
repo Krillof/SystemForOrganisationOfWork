@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import { enter, register } from '../../store/userDataSlice';
+import { tryEnter, tryRegister } from '../../store/userDataSlice';
 import { Modal, Skeleton, Button, TextField, Box, Container } from '@mui/material';
 
 export default function Entrance() {
@@ -30,7 +30,7 @@ export default function Entrance() {
 
           <Button
             onClick={() => {
-              dispatch(enter({
+              dispatch(tryEnter({
                 login:loginRef.current.value,
                 password:passwordRef.current.value,
               }))
@@ -40,7 +40,7 @@ export default function Entrance() {
           </Button>
           <Button
             onClick={() => {
-              dispatch(register({
+              dispatch(tryRegister({
                 login:loginRef.current.value,
                 password:passwordRef.current.value,
               }))

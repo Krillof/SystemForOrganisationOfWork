@@ -1,6 +1,5 @@
 from typing import Any
 from neomodel import *
-import jsonpickle
 from jsonpickle.handlers import BaseHandler, register
 import datetime
 from enum import Enum
@@ -172,6 +171,8 @@ class User(NodeWithRoledRel, PositionedNodeFlattened):
       "password" : self.password
     } | PositionedNodeFlattened.flatten(self)
   
+
+
 class GlobalTheme(NodeWithDatedRel, PositionedNodeFlattened):
   title = StringProperty()
   science_group = RelationshipTo('ScienceGroup', 'GLOBAL_THEME', model=GlobalThemeScienceGroupRel, cardinality=ZeroOrOne)

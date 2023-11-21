@@ -1,45 +1,54 @@
-import {createSlice} from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { API_URL } from "../index";
 import axios from "axios";
+
+export const tryEnter = createAsyncThunk(
+  'enter',
+  async (enterData, thunkAPI) => {
+    const params = new URLSearchParams();
+    params.append('login', enterData.login);
+    params.append('password', enterData.password);
+    const response = await axios.post(API_URL + "enter", params);
+    return {
+      message: JSON.parse(response.data).message,
+      login: enterData.login
+    };
+  }
+);
+
+export const tryRegister = createAsyncThunk(
+  'register',
+  async (enterData, thunkAPI) => {
+    const params = new URLSearchParams();
+    params.append('login', enterData.login);
+    params.append('password', enterData.password);
+    const response = await axios.post(API_URL + "register", params);
+    return {
+      message: JSON.parse(response.data).message,
+      login: enterData.login
+    };
+  }
+);
 
 export const userDataSlice = createSlice({
   name: "userData",
   initialState: {
     login: null
   },
-  reducers: {
-    enter: (state, action) =>{
-      console.log("Entering...");
-      const params = new URLSearchParams();
-      params.append('login', action.payload.login);
-      params.append('password', action.payload.password);
-      axios.post(API_URL + "enter", params)
-        .then((response) => {
-          console.log(response.data);
-          let data = JSON.parse(response.data);
-          if (data.message === ""){
-            state.login = data.login;
-          }
-        });
+  reducers: {},
+  extraReducers:{
+    [tryRegister.pending]: (state) => {
+      // When loading do something
     },
-    register: (state, action)=>{
-      console.log("Registering...");
-      axios.post(API_URL + "register", null, {params:{
-        "login":1 ,
-        "password": 1,
-      }})
-        .then((response) => {
-          let data = JSON.parse(response.data);
-          if (data.message === ""){
-            state.login = data.login;
-          }
-        });
+    [tryRegister.fulfilled]: (state, { payload }) => {
+      if (payload.message == ""){
+        state.login = payload.login;
+      }
     },
-    leave: (state) =>{
-      state.login = null;
+    [tryRegister.rejected]: (state) => {
+      console.log("Problem with registering");
     }
   }
 });
 
-export const { enter, register, leave } = userDataSlice.actions;
 export default userDataSlice.reducer;
