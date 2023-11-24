@@ -73,7 +73,44 @@ def register(request):
         else:
             message = "User with this login already exists"
     except ValidationError as err:
-        message = str(err)
+        message = err.message
+    return Response(jsonpickle.encode({
+        "message" : message
+    }))
+
+
+
+
+
+@api_view(['POST'])
+def leave(request):
+    message = ""
+    login = request.POST["login"]
+
+    # TODO: do something with it
+    
+    return Response(jsonpickle.encode({
+        "message" : message
+    }))
+
+
+
+
+
+@api_view(['POST'])
+def delete(request):
+    message = ""
+    login = request.POST["login"]
+
+    # TODO: use something to hash password
+    try:
+        u = User.nodes.filter(login=login)
+        if u:
+            u[0].delete()
+        else:
+            message = "No such user"
+    except ValidationError as err:
+        message = err.message
     return Response(jsonpickle.encode({
         "message" : message
     }))

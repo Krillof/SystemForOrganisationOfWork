@@ -25,4 +25,6 @@ urlpatterns = [
     re_path(r'^api/test', views.api_test),
     re_path(r'^api/enter', views.enter),
     re_path(r'^api/register', views.register),
+    re_path(r'^api/leave', views.leave),
+    re_path(r'^api/delete', views.delete),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

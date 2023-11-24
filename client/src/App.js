@@ -9,7 +9,6 @@ import { useSelector } from 'react-redux';
 
 function App() {
   const login = useSelector((state) => state.userData.login);
-  console.log(login);
 
 
   if (IS_DEBUG) {
