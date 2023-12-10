@@ -6,9 +6,9 @@ export const tryEnter = createAsyncThunk(
   'enter',
   async (enterData, thunkAPI) => {
     const params = new URLSearchParams();
-    params.append('login', enterData.login);
+    params.append('username', enterData.login);
     params.append('password', enterData.password);
-    const response = await axios.post(API_URL + "enter", params);
+    const response = await axios.post(API_URL + "users/enter", params);
     return {
       message: JSON.parse(response.data).message,
       login: enterData.login
@@ -20,9 +20,9 @@ export const tryRegister = createAsyncThunk(
   'register',
   async (enterData, thunkAPI) => {
     const params = new URLSearchParams();
-    params.append('login', enterData.login);
+    params.append('username', enterData.login);
     params.append('password', enterData.password);
-    const response = await axios.post(API_URL + "register", params);
+    const response = await axios.post(API_URL + "users/register", params);
     return {
       message: JSON.parse(response.data).message,
       login: enterData.login
@@ -34,8 +34,7 @@ export const tryLeave = createAsyncThunk(
   'leave',
   async (enterData, thunkAPI) => {
     const params = new URLSearchParams();
-    params.append('login', enterData.login);
-    const response = await axios.post(API_URL + "leave", params);
+    const response = await axios.post(API_URL + "users/leave", params);
     return {
       message: JSON.parse(response.data).message,
       login: enterData.login
@@ -47,8 +46,7 @@ export const tryDelete = createAsyncThunk(
   'delete',
   async (enterData, thunkAPI) => {
     const params = new URLSearchParams();
-    params.append('login', enterData.login);
-    const response = await axios.post(API_URL + "delete", params);
+    const response = await axios.post(API_URL + "users/delete", params);
     return {
       message: JSON.parse(response.data).message,
       login: enterData.login
