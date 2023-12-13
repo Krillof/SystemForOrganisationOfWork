@@ -40,6 +40,8 @@ class MainConfig(AppConfig):
             art1 = Article(doi="https://doi.org/10.3390/membranes13050503", citations=100, accesses=500, x=800, y=100).save()
             art1.connect_and_write_creation_date(t2)
 
+            sci_group2 = ScienceGroup(title="ABC", x=-200, y=0).save()
+
 
             joshua.save()
             caroline.save()
@@ -48,6 +50,7 @@ class MainConfig(AppConfig):
             t1.save()
             t2.save()
             art1.save()
+            sci_group2.save()
         
 
 

@@ -137,3 +137,8 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 # Other settings
 NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:123@localhost:7687'
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+]
+SESSION_ENGINE = 'django.contrib.sessions.backends.file'
+SESSION_SAVE_EVERY_REQUEST = True

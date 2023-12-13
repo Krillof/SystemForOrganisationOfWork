@@ -4,6 +4,8 @@ from jsonpickle.handlers import BaseHandler, register
 import datetime
 from enum import Enum
 import subprocess
+import random
+import string
 
 
 ### Classes for jsonification
@@ -93,6 +95,7 @@ class NodeWithDatedRel(StructuredNode):
 
 
 class Role(Enum):
+  Owner = "Owner"
   Employee = "Employee"
 
 
@@ -144,6 +147,10 @@ class ArticleTaskRel(DatedRel):
 
 class ScienceGroup(PositionedNodeFlattened):
   title = StringProperty()
+
+  def get_id(self):
+    return self.element_id
+
   def flatten(self):
     return {
       "id" : str(self.element_id),
@@ -153,10 +160,26 @@ class ScienceGroup(PositionedNodeFlattened):
       "title" : self.title,
     } | super().flatten()
 
+
 class User(NodeWithRoledRel, PositionedNodeFlattened):
   login = StringProperty()
   password = StringProperty()
+  token = StringProperty()
   science_groups = RelationshipTo('ScienceGroup', 'PARTICIPANT', model=ParticipantRel, cardinality=ZeroOrMore)
+  current_science_group = RelationshipTo('ScienceGroup', 'CURRENTLY_IN', model=ParticipantRel, cardinality=ZeroOrOne)
+
+  def sign_in(self):
+    token = ''.join(random.choice(string.ascii_letters + string.digits) for i in range(30))
+    self.token = token
+    self.save()
+    return token
+
+  def sign_out(self):
+    self.token = ''
+    self.save()
+
+  def get_id(self):
+    return self.element_id
 
   def get_roled_relationship(self):
     return self.science_groups
@@ -172,6 +195,23 @@ class User(NodeWithRoledRel, PositionedNodeFlattened):
     } | PositionedNodeFlattened.flatten(self)
   
 
+class MembershipRequest(NodeWithDatedRel):
+  user = RelationshipTo('User', 'FROM', model=DatedRel, cardinality=One)
+  science_group = RelationshipTo('ScienceGroup', 'TO', model=RelationFlattened, cardinality=One)
+  is_accepted = BooleanProperty(default=False)
+  is_aborted = BooleanProperty(default=False)
+
+  def get_dated_relationship(self):
+    return self.user
+  
+  def flatten(self):
+    return {
+      "id" : str(self.element_id),
+      "data" : {
+        "is_accepted" : self.is_accepted,
+        "is_aborted" : self.is_aborted,
+      },
+    } | PositionedNodeFlattened.flatten(self)
 
 class GlobalTheme(NodeWithDatedRel, PositionedNodeFlattened):
   title = StringProperty()

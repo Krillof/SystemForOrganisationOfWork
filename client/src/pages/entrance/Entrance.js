@@ -3,11 +3,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { tryEnter, tryRegister } from '../../store/userDataSlice';
 import { Modal, Chip, Divider, Button, TextField, Box, Container, Alert } from '@mui/material';
 
+import { trySetCurrentLogin } from '../../store/userDataSlice';
+
 export default function Entrance() {
   const entrance_error_message = useSelector((state) => state.userData.entrance_error_message);
   const dispatch = useDispatch();
   const loginRef = useRef("");
   const passwordRef = useRef("");
+
+  dispatch(trySetCurrentLogin());
 
   return (
     <Modal
