@@ -33,6 +33,7 @@ urlpatterns = [
     re_path(r'^api/science_groups/accept_membership_request', views.science_group_accept_membership_request),
     re_path(r'^api/science_groups/get_participated_groups', views.science_group_get_participated_groups),
     re_path(r'^api/science_groups/enter', views.science_group_enter),
-    re_path(r'^api/science_groups/get_data', views.science_group_get_data),
+    re_path(r'^api/science_groups/check_if_entered', views.science_group_check_if_entered),
     re_path(r'^api/science_groups/leave', views.science_group_leave),
+    re_path(r'^api/science_groups/workspace/update_mindmap', views.workspace_update_mindmap),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -6,12 +6,13 @@ import { Modal, Chip, Divider, Button, TextField, Box, Container, Alert } from '
 import { trySetCurrentLogin } from '../../store/userDataSlice';
 
 export default function Entrance() {
-  const entrance_error_message = useSelector((state) => state.userData.entrance_error_message);
   const dispatch = useDispatch();
+  const entrance_error_message = useSelector((state) => state.userData.entrance_error_message);
   const loginRef = useRef("");
   const passwordRef = useRef("");
 
   dispatch(trySetCurrentLogin());
+  
 
   return (
     <Modal

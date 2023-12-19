@@ -135,11 +135,11 @@ const initialEdges = [
 ];
 */
 
-export default function MindMap ({nodes, edges}) {
+export default function MindMap ({nodes, links}) {
   return (
     <ReactFlow
       nodes={nodes}
-      edges={edges}
+      edges={links}
       fitView
       attributionPosition="top-right"
       nodeTypes={nodeTypes}

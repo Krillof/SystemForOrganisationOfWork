@@ -6,7 +6,7 @@ import { token_key } from "./userDataSlice";
 
 export const tryGetAvailableGroups = createAsyncThunk(
   'getAvailableGroups',
-  async (data, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
     params.append('token', read_cookie(token_key));
     const response = await axios.post(API_URL + "science_groups/get_available_groups", params);
@@ -16,10 +16,10 @@ export const tryGetAvailableGroups = createAsyncThunk(
 
 export const trySendMembershipRequestScienceGroup = createAsyncThunk(
   'sendMembershipRequestScienceGroup',
-  async (data, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
     params.append('token', read_cookie(token_key));
-    params.append('science_group_id', data.science_group_id);
+    params.append('science_group_id', outerData.science_group_id);
     const response = await axios.post(API_URL + "science_groups/send_membership_request", params);
     return JSON.parse(response.data);
   }
@@ -27,7 +27,7 @@ export const trySendMembershipRequestScienceGroup = createAsyncThunk(
 
 export const tryGetMembershipRequests = createAsyncThunk(
   'getMembershipRequests',
-  async (data, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
     params.append('token', read_cookie(token_key));
     const response = await axios.post(API_URL + "science_groups/get_membership_requests", params);
@@ -37,9 +37,9 @@ export const tryGetMembershipRequests = createAsyncThunk(
 
 export const tryAcceptMembershipRequest = createAsyncThunk(
   'acceptMembershipRequest',
-  async (data, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
-    params.append('user_id', data.user_id);
+    params.append('user_id', outerData.user_id);
     params.append('token', read_cookie(token_key));
     const response = await axios.post(API_URL + "science_groups/accept_membership_request", params);
     return JSON.parse(response.data);
@@ -52,7 +52,7 @@ Gets all science groups where user is participant.
 */
 export const tryGetParticipatedGroups = createAsyncThunk(
   'getParticipatedGroups',
-  async (userData, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
     params.append('token', read_cookie(token_key));
     const response = await axios.post(API_URL + "science_groups/get_participated_groups", params);
@@ -66,9 +66,9 @@ Used to enter group, where user is already participant.
 */
 export const tryEnterScienceGroup = createAsyncThunk(
   'enterScienceGroup',
-  async (userData, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
-    params.append('science_group_id', data.science_group_id);
+    params.append('science_group_id', outerData.science_group_id);
     params.append('token', read_cookie(token_key));
     const response = await axios.post(API_URL + "science_groups/enter", params);
     const data = JSON.parse(response.data);
@@ -77,12 +77,12 @@ export const tryEnterScienceGroup = createAsyncThunk(
 );
 
 
-export const tryGetScienceGroupData = createAsyncThunk(
-  'getScienceGroupData',
-  async (userData, thunkAPI) => {
+export const tryGetCheckIfEntered = createAsyncThunk(
+  'getCheckIfEntered',
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
     params.append('token', read_cookie(token_key));
-    const response = await axios.post(API_URL + "science_groups/get_data", params);
+    const response = await axios.post(API_URL + "science_groups/check_if_entered", params);
     return JSON.parse(response.data);
   }
 );
@@ -93,7 +93,7 @@ Used to leave group (For example, to go to another group."Leave" means here "to 
 */
 export const tryLeaveScienceGroup = createAsyncThunk(
   'leaveScienceGroup',
-  async (userData, thunkAPI) => {
+  async (outerData, thunkAPI) => {
     const params = new URLSearchParams();
     params.append('token', read_cookie(token_key));
     const response = await axios.post(API_URL + "science_groups/leave", params);
@@ -103,6 +103,16 @@ export const tryLeaveScienceGroup = createAsyncThunk(
 
 
 
+
+export const tryUpdateScienceGroupMindMapData = createAsyncThunk(
+  'updateScienceGroupMindMapData',
+  async (outerData, thunkAPI) => {
+    const params = new URLSearchParams();
+    params.append('token', read_cookie(token_key));
+    const response = await axios.post(API_URL + "science_groups/workspace/update_mindmap", params);
+    return JSON.parse(response.data);
+  }
+);
 
 
 
@@ -114,8 +124,10 @@ export const scienceGroupDataSlice = createSlice({
     participated_groups:[],
     is_updated_participated_groups: false,
     gotten_requests_for_membership:[],
-    current_group_id:null,
     current_group_title:null,
+
+    workspace_mindmap_data: null,
+    is_have_to_update_mindmap_data: true,
   },
   reducers: {},
   extraReducers:{
@@ -123,8 +135,8 @@ export const scienceGroupDataSlice = createSlice({
       // When loading do something
     },
     [tryGetAvailableGroups.fulfilled]: (state, { payload }) => {
+      console.log(payload)
       if (payload.message == ""){
-        console.log(payload.data);
         state.available_groups = payload.data;
       } else {
         console.log(payload.message);
@@ -217,10 +229,28 @@ export const scienceGroupDataSlice = createSlice({
     },
 
 
+    [tryGetCheckIfEntered.pending]: (state) => {
+      // When loading do something
+    },
+    [tryGetCheckIfEntered.fulfilled]: (state, { payload }) => {
+      if (payload.message == ""){
+        if (payload.data != ""){
+          state.current_group_title = payload.data;
+        }
+      } else {
+        console.log(payload.message);
+      }
+    },
+    [tryGetCheckIfEntered.rejected]: (state) => {
+      console.log("Problem with tryEnterScienceGroup");
+    },
+
+
     [tryLeaveScienceGroup.pending]: (state) => {
       // When loading do something
     },
     [tryLeaveScienceGroup.fulfilled]: (state, { payload }) => {
+      console.log(payload)
       if (payload.message == ""){
         state.current_group_title = null;
       } else {
@@ -232,6 +262,24 @@ export const scienceGroupDataSlice = createSlice({
     },
 
 
+
+
+    [tryUpdateScienceGroupMindMapData.pending]: (state) => {
+      // When loading do something
+    },
+    [tryUpdateScienceGroupMindMapData.fulfilled]: (state, { payload }) => {
+      console.log(payload)
+      if (payload.message == ""){
+        state.workspace_mindmap_data = payload.data;
+        state.is_have_to_update_mindmap_data = false;
+      } else {
+        console.log(payload.message);
+      }
+
+    },
+    [tryUpdateScienceGroupMindMapData.rejected]: (state) => {
+      console.log("Problem with tryGetAvailableGroups");
+    },
    
   }
 });

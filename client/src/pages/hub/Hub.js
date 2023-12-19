@@ -1,5 +1,5 @@
 import { tryLeave, tryDelete } from '../../store/userDataSlice';
-import { tryGetAvailableGroups, trySendMembershipRequestScienceGroup, tryEnterScienceGroup, tryGetParticipatedGroups } from '../../store/scienceGroupDataSlice';
+import { tryGetAvailableGroups, trySendMembershipRequestScienceGroup, tryEnterScienceGroup, tryGetParticipatedGroups, tryGetCheckIfEntered } from '../../store/scienceGroupDataSlice';
 import { useSelector, useDispatch } from 'react-redux';
 import { Modal, Chip, Divider, Button, Box, Container, List, ListItem, IconButton, ListItemText } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
@@ -11,6 +11,8 @@ export default function Hub() {
   const is_updated_available_groups = useSelector((state) => state.scienceGroupData.is_updated_available_groups);
   const participated_groups = useSelector((state) => state.scienceGroupData.participated_groups);
   const is_updated_participated_groups = useSelector((state) => state.scienceGroupData.is_updated_participated_groups);
+  
+  dispatch(tryGetCheckIfEntered({}));
 
   if (!is_updated_available_groups)
     dispatch(tryGetAvailableGroups({}));

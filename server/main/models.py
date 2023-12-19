@@ -1,7 +1,7 @@
 from typing import Any
 from neomodel import *
 from jsonpickle.handlers import BaseHandler, register
-import datetime
+from datetime import date
 from enum import Enum
 import subprocess
 import random
@@ -81,92 +81,58 @@ class PositionedNodeFlattened(NodeFlattened):
       }
     } | super().flatten()
 
-class NodeWithDatedRel(StructuredNode):
-  
-  def get_dated_relationship(self):
-    raise NotImplementedError()
-
-  def connect_and_write_creation_date(self, node):
-    rel = self.get_dated_relationship().connect(node)
-    rel.created_date = datetime.date.today()
-    self.save()
-    node.save()
-    return rel.save()
-
-
-class Role(Enum):
-  Owner = "Owner"
-  Employee = "Employee"
-
-
-class NodeWithRoledRel(StructuredNode):
-  
-  def get_roled_relationship(self):
-    raise NotImplementedError()
-
-  def connect_and_write_role(self, node, role):
-    rel = self.get_roled_relationship().connect(node)
-    rel.role = role.value
-    self.save()
-    node.save()
-    return rel.save()
-
-
-
-
-
-
-
-
-
-
-
-### Connection classes
-
-
-class ParticipantRel(RoledRel):
-  pass
-
-class GlobalThemeScienceGroupRel(DatedRel):
-  pass
-
-class TaskGlobalThemeRel(DatedRel):
-  pass
-
-class ArticleTaskRel(DatedRel):
-  pass
-
-
-
 
 
 
 
 ### Database entities classes
 
+class Role(Enum):
+  Owner = "Owner"
+  Employee = "Employee"
 
-class ScienceGroup(PositionedNodeFlattened):
+
+class ScienceGroup(StructuredNode):
   title = StringProperty()
+  global_themes = RelationshipTo('GlobalTheme', 'GLOBAL_THEME', model=DatedRel, cardinality=ZeroOrMore)
+  users = RelationshipTo('User', 'USER', model=RoledRel, cardinality=ZeroOrMore)
+
+  def add_new_user(self, user_node, role=Role.Employee):
+    rel_science_group = self.users.connect(user_node)
+    rel_user = user_node.science_groups.connect(self)
+    rel_science_group.role = role
+    rel_user.role = role
+    self.save()
+    user_node.save()
+    rel_science_group.save()
+    rel_user.save()
+    
+  def add_global_theme(self, global_theme_node):
+    rel_science_group = self.global_themes.connect(global_theme_node)
+    rel_global_theme = global_theme_node.science_group.connect(self)
+    rel_science_group.created_date = date.today()
+    rel_global_theme.created_date = date.today()
+    self.save()
+    global_theme_node.save()
+    rel_science_group.save()
+    rel_global_theme.save()
 
   def get_id(self):
     return self.element_id
 
-  def flatten(self):
-    return {
-      "id" : str(self.element_id),
-      "data" : {
-        "label": self.title,
-      },
-      "title" : self.title,
-    } | super().flatten()
 
-
-class User(NodeWithRoledRel, PositionedNodeFlattened):
+class User(StructuredNode):
   login = StringProperty()
   password = StringProperty()
   token = StringProperty()
-  science_groups = RelationshipTo('ScienceGroup', 'PARTICIPANT', model=ParticipantRel, cardinality=ZeroOrMore)
-  current_science_group = RelationshipTo('ScienceGroup', 'CURRENTLY_IN', model=ParticipantRel, cardinality=ZeroOrOne)
+  science_groups = RelationshipTo('ScienceGroup', 'PARTICIPANT', model=RoledRel, cardinality=ZeroOrMore)
+  current_science_group = RelationshipTo('ScienceGroup', 'CURRENTLY_IN', model=RoledRel, cardinality=ZeroOrOne)
+
+  def set_current_science_group(self, science_group_node):
+    rel = self.current_science_group.connect(science_group_node)
+    self.save()
+    science_group_node.save()
+    rel.save()
 
   def sign_in(self):
     token = ''.join(random.choice(string.ascii_letters + string.digits) for i in range(30))
@@ -181,59 +147,51 @@ class User(NodeWithRoledRel, PositionedNodeFlattened):
   def get_id(self):
     return self.element_id
 
-  def get_roled_relationship(self):
-    return self.science_groups
-
-  def flatten(self): 
-    return {
-      "id" : str(self.element_id),
-      "data" : {
-        "label" : self.login,
-      },
-      "login" : self.login,
-      "password" : self.password
-    } | PositionedNodeFlattened.flatten(self)
   
 
-class MembershipRequest(NodeWithDatedRel):
+class MembershipRequest(StructuredNode):
   user = RelationshipTo('User', 'FROM', model=DatedRel, cardinality=One)
   science_group = RelationshipTo('ScienceGroup', 'TO', model=RelationFlattened, cardinality=One)
   is_accepted = BooleanProperty(default=False)
   is_aborted = BooleanProperty(default=False)
 
-  def get_dated_relationship(self):
-    return self.user
+class GlobalTheme(PositionedNodeFlattened):
+  title = StringProperty()
+  science_group = RelationshipTo('ScienceGroup', 'GLOBAL_THEME', model=DatedRel, cardinality=ZeroOrOne)
+  tasks = RelationshipTo('Task', 'TASK', model=DatedRel, cardinality=ZeroOrMore)
   
+  def add_task(self, task_node):
+    rel_global_theme = self.tasks.connect(task_node)
+    rel_task = task_node.global_theme.connect(self)
+    rel_global_theme.created_date = date.today()
+    rel_task.created_date = date.today()
+    self.save()
+    task_node.save()
+    rel_task.save()
+    rel_global_theme.save()
+
   def flatten(self):
     return {
       "id" : str(self.element_id),
       "data" : {
-        "is_accepted" : self.is_accepted,
-        "is_aborted" : self.is_aborted,
+        "label": self.title,
       },
     } | PositionedNodeFlattened.flatten(self)
 
-class GlobalTheme(NodeWithDatedRel, PositionedNodeFlattened):
+class Task(PositionedNodeFlattened):
   title = StringProperty()
-  science_group = RelationshipTo('ScienceGroup', 'GLOBAL_THEME', model=GlobalThemeScienceGroupRel, cardinality=ZeroOrOne)
+  global_theme = RelationshipTo('GlobalTheme', 'TASK', model=DatedRel, cardinality=ZeroOrMore)
+  articles = RelationshipTo('Article', 'ARTICLE', model=DatedRel, cardinality=ZeroOrMore)
 
-  def get_dated_relationship(self):
-    return self.science_group
-  
-  def flatten(self):
-    return {
-      "id" : str(self.element_id),
-      "data" : {
-        "label", self.title,
-      },
-    } | PositionedNodeFlattened.flatten(self)
-
-class Task(NodeWithDatedRel, PositionedNodeFlattened):
-  title = StringProperty()
-  global_theme = RelationshipTo('GlobalTheme', 'TASK', model=TaskGlobalThemeRel, cardinality=ZeroOrMore)
-
-  def get_dated_relationship(self):
-    return self.global_theme
+  def add_article(self, article_node):
+    rel_article_node = article_node.task.connect(self)
+    rel_task = self.articles.connect(article_node)
+    rel_article_node.created_date = date.today()
+    rel_task.created_date = date.today()
+    self.save()
+    article_node.save()
+    rel_task.save()
+    rel_article_node.save()
   
   def flatten(self):
     return {
@@ -245,14 +203,11 @@ class Task(NodeWithDatedRel, PositionedNodeFlattened):
 
 
 
-class Article(NodeWithDatedRel, PositionedNodeFlattened):
+class Article(PositionedNodeFlattened):
   doi = StringProperty()
   citations = IntegerProperty()
   accesses = IntegerProperty()
-  tasks = RelationshipTo('Task', 'ARTICLE_FOR', model=ArticleTaskRel, cardinality=ZeroOrMore)
-
-  def get_dated_relationship(self):
-    return self.tasks
+  task = RelationshipTo('Task', 'ARTICLE_FOR', model=DatedRel, cardinality=ZeroOrMore)
   
   class ArticleData:
     def __init__(self, str):

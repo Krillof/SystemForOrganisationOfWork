@@ -7,7 +7,7 @@ from .validators import *
 
 
 def default_response(message="", data=None):
-    if data:
+    if data!=None:
         return Response(jsonpickle.encode({
             "message" : message,
             "data": data
@@ -238,8 +238,8 @@ def science_group_enter(request): # +
     try:
         user = User.nodes.get(token=token)
         try:
-            science_group = ScienceGroup.nodes.get(uid=science_group_id)
-            user.current_science_group = science_group
+            science_group = db.cypher_query("MATCH (a:ScienceGroup) WHERE id(a) = " + science_group_id + " return a", resolve_objects=True)[0][0][0]
+            user.set_current_science_group(science_group)
             data = science_group.title
         except:
             message="Error on server"
@@ -248,16 +248,18 @@ def science_group_enter(request): # +
     return default_response(message, data)
 
 @api_view(['POST'])
-def science_group_get_data(request): # +-
+def science_group_check_if_entered(request): 
     message = ""
     data = None
     token = request.POST["token"]
 
     try:
         user = User.nodes.get(token=token)
-        science_group = ScienceGroup.nodes.get(uid=request.session["science_group_id"])
-        user_role = user.science_groups.relationship(science_group).role # maybe will be used after...
-        data = science_group # maybe will be different...
+        current_science_group = user.current_science_group.single()
+        if current_science_group:
+            data = current_science_group.title
+        else:
+            data = ""
     except:
         message="User not logined"
 
@@ -271,8 +273,40 @@ def science_group_leave(request): # +
 
     try:
         user = User.nodes.get(token=token)
-        del request.session["science_group_id"]
+        # user.current_science_group = None ? TODO: 
+        user.save()
     except:
         message="User not logined"
     return default_response(message)
+
+
+@api_view(['POST'])
+def workspace_update_mindmap(request):
+    message = ""
+    data = None
+    token = request.POST["token"]
+
+    try:
+        user = User.nodes.get(token=token)
+        current_science_group = user.current_science_group.single()
+        if current_science_group:
+        
+            data = {
+                "nodes" : [],
+                "links" : [],
+            }
+
+            for global_theme in current_science_group.global_themes.all():
+                data["nodes"].append(global_theme)
+                for task in global_theme.tasks.all():
+                    data["nodes"].append(task)
+                    data["links"].append(global_theme.tasks.relationship(task))
+                    for article in task.articles.all():
+                        data["nodes"].append(article)
+                        data["links"].append(task.articles.relationship(article))
+        else:
+            message="No current group"
+    except Exception as ex:
+        message= str(ex)
+    return default_response(message, data)
 
