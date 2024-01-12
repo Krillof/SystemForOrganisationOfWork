@@ -82,6 +82,13 @@ class PositionedNodeFlattened(NodeFlattened):
     } | super().flatten()
 
 
+class NodesTypes(Enum):
+  GlobalTheme = "GlobalTheme"
+  Task = "Task"
+  Article = "Article"
+
+
+
 
 
 
@@ -96,12 +103,21 @@ class ScienceGroup(StructuredNode):
   title = StringProperty()
   global_themes = RelationshipTo('GlobalTheme', 'GLOBAL_THEME', model=DatedRel, cardinality=ZeroOrMore)
   users = RelationshipTo('User', 'USER', model=RoledRel, cardinality=ZeroOrMore)
+  membership_requests = RelationshipTo('MembershipRequest', 'MEMBERSHIP_REQUEST', model=RelationFlattened, cardinality=One)
+
+  def make_membership_request(self, user):
+    membership_request = MembershipRequest().save()
+    membership_request.user.connect(user).save()
+    rel_science_group = self.membership_requests.connect(membership_request) # I don't know why you must not save here...
+    rel_membership_request = membership_request.science_group.connect(self) # And not save here...
+    self.save()
+    user.save()
 
   def add_new_user(self, user_node, role=Role.Employee):
     rel_science_group = self.users.connect(user_node)
     rel_user = user_node.science_groups.connect(self)
-    rel_science_group.role = role
-    rel_user.role = role
+    rel_science_group.role = role.value
+    rel_user.role = role.value
     self.save()
     user_node.save()
     rel_science_group.save()
@@ -147,13 +163,14 @@ class User(StructuredNode):
   def get_id(self):
     return self.element_id
 
-  
-
 class MembershipRequest(StructuredNode):
-  user = RelationshipTo('User', 'FROM', model=DatedRel, cardinality=One)
-  science_group = RelationshipTo('ScienceGroup', 'TO', model=RelationFlattened, cardinality=One)
+  user = RelationshipTo('User', 'FROM', model=DatedRel, cardinality=ZeroOrOne)
+  science_group = RelationshipTo('ScienceGroup', 'TO', model=RelationFlattened, cardinality=ZeroOrOne)
   is_accepted = BooleanProperty(default=False)
   is_aborted = BooleanProperty(default=False)
+
+  def get_id(self):
+    return self.element_id
 
 class GlobalTheme(PositionedNodeFlattened):
   title = StringProperty()
@@ -173,6 +190,7 @@ class GlobalTheme(PositionedNodeFlattened):
   def flatten(self):
     return {
       "id" : str(self.element_id),
+      "workspace_type": NodesTypes.GlobalTheme.value,
       "data" : {
         "label": self.title,
       },
@@ -196,6 +214,7 @@ class Task(PositionedNodeFlattened):
   def flatten(self):
     return {
       "id" : str(self.element_id),
+      "workspace_type": NodesTypes.Task.value,
       "data" : {
         "label": self.title,
       },
@@ -205,6 +224,7 @@ class Task(PositionedNodeFlattened):
 
 class Article(PositionedNodeFlattened):
   doi = StringProperty()
+  name = StringProperty()
   citations = IntegerProperty()
   accesses = IntegerProperty()
   task = RelationshipTo('Task', 'ARTICLE_FOR', model=DatedRel, cardinality=ZeroOrMore)
@@ -212,7 +232,7 @@ class Article(PositionedNodeFlattened):
   class ArticleData:
     def __init__(self, str):
       str_parts = str.split()
-      self.ciations_number = int(str_parts[0])
+      self.citations_number = int(str_parts[0])
       self.accesses_number = int(str_parts[1])
 
   def get_article_data(self):
@@ -223,31 +243,50 @@ class Article(PositionedNodeFlattened):
         raise Exception("Problem with article reader: " + res.stderr.readline())
       data = Article.ArticleData(stdout)
     return data
-
   
   def flatten(self):
 
-    res = {
-      "id" : str(self.element_id),
-      "data" : {
-        "label" : self.doi,
-      },
-      "doi" : self.doi,
-    }
+    
 
     try:
-      # TODO: Переделать, чтобы запросы были реже
-      # data = self.get_article_data()
-      # res += [["citations", data.ciations_number]]
-      # res += [["accesses", data.accesses_number]]
+      #article_data = self.get_article_data()
+      #"citations" : article_data.citations_number, 
+      #"accesses" : article_data.accesses_number,
 
-      res = res | {
-        "citations" : 1, 
-        "accesses" : 20,
+      res = {
+        "id" : str(self.element_id),
+        "type": "doi_node",
+        "workspace_type": NodesTypes.Article.value,
+        "data" : {
+          "label" : self.name,
+          "id" : str(self.element_id), # need for doi 
+          "doi" : self.doi,
+        },
+        "doi" : self.doi,
       }
     except Exception as ex:
-      res = res | {
+      res = {
         "error" : str(ex),
       }
 
     return res | PositionedNodeFlattened.flatten(self)
+
+
+def get_node_and_its_children_by_type_and_id(type, id):
+  ans = []
+  if type == NodesTypes.GlobalTheme.value:
+    global_theme = db.cypher_query("MATCH (a:"+type+") WHERE id(a) = " + id + " return a", resolve_objects=True)[0][0][0]
+    ans.append(global_theme)
+    for task in global_theme.tasks.all():
+      ans.append(task)
+      for article in task.articles.all():
+        ans.append(article)
+  elif type == NodesTypes.Task.value:
+    task = db.cypher_query("MATCH (a:"+type+") WHERE id(a) = " + id + " return a", resolve_objects=True)[0][0][0]
+    ans.append(task)
+    for article in task.articles.all():
+        ans.append(article)
+  elif type == NodesTypes.Article.value:
+    ans.append(db.cypher_query("MATCH (a:"+type+") WHERE id(a) = " + id + " return a", resolve_objects=True)[0][0][0])
+  return ans
+

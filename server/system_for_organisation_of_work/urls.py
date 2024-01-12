@@ -36,4 +36,9 @@ urlpatterns = [
     re_path(r'^api/science_groups/check_if_entered', views.science_group_check_if_entered),
     re_path(r'^api/science_groups/leave', views.science_group_leave),
     re_path(r'^api/science_groups/workspace/update_mindmap', views.workspace_update_mindmap),
+    re_path(r'^api/science_groups/workspace/create_global_theme_vertex', views.workspace_create_global_theme_vertex),
+    re_path(r'^api/science_groups/workspace/create_task_vertex', views.workspace_create_task_vertex),
+    re_path(r'^api/science_groups/workspace/create_article_vertex', views.workspace_create_article_vertex),
+    re_path(r'^api/science_groups/workspace/delete_vertex', views.workspace_delete_vertex),
+    re_path(r'^api/science_groups/workspace/get_article_data', views.workspace_get_article_data),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

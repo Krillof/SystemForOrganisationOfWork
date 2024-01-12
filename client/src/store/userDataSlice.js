@@ -66,7 +66,8 @@ export const userDataSlice = createSlice({
   name: "userData",
   initialState: {
     login: null,
-    entrance_error_message: null
+    entrance_error_message: null,
+    is_have_to_update_science_group_data: true,
   },
   reducers: {
     trySetCurrentLogin(state){
@@ -82,6 +83,10 @@ export const userDataSlice = createSlice({
       }
     },
 
+    updatedScienceGroupData(state){
+      state.is_have_to_update_science_group_data=false;
+    }
+
   },
   extraReducers:{
     [tryRegister.pending]: (state) => {
@@ -93,6 +98,7 @@ export const userDataSlice = createSlice({
         state.entrance_error_message = null;
         bake_cookie(token_key, payload.token);
         bake_cookie(login_key, payload.login);
+        state.is_have_to_update_science_group_data = true;
       } else {
         state.entrance_error_message = payload.message;
         console.log(payload.message);
@@ -112,6 +118,7 @@ export const userDataSlice = createSlice({
         state.entrance_error_message = null;
         bake_cookie(token_key, payload.token);
         bake_cookie(login_key, payload.login);
+        state.is_have_to_update_science_group_data = true;
       } else {
         state.entrance_error_message = payload.message;
         console.log(payload.message);
@@ -132,6 +139,7 @@ export const userDataSlice = createSlice({
         state.login = null;
         delete_cookie(token_key);
         delete_cookie(login_key);
+        state.is_have_to_update_science_group_data = true;
       } else {
         console.log(payload.message);
       }
@@ -151,6 +159,7 @@ export const userDataSlice = createSlice({
         state.login = null;
         delete_cookie(token_key);
         delete_cookie(login_key);
+        state.is_have_to_update_science_group_data = true;
       } else {
         console.log(payload.message);
       }
@@ -158,8 +167,11 @@ export const userDataSlice = createSlice({
     [tryDelete.rejected]: (state) => {
       console.log("Problem with deleting");
     },
+
+    
+
   }
 });
 
-export const { trySetCurrentLogin } = userDataSlice.actions;
+export const { trySetCurrentLogin, updatedScienceGroupData } = userDataSlice.actions;
 export default userDataSlice.reducer;

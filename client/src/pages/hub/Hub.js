@@ -1,5 +1,5 @@
-import { tryLeave, tryDelete } from '../../store/userDataSlice';
-import { tryGetAvailableGroups, trySendMembershipRequestScienceGroup, tryEnterScienceGroup, tryGetParticipatedGroups, tryGetCheckIfEntered } from '../../store/scienceGroupDataSlice';
+import { tryLeave, tryDelete, updatedScienceGroupData } from '../../store/userDataSlice';
+import { tryGetAvailableGroups, trySendMembershipRequestScienceGroup, tryEnterScienceGroup, tryGetParticipatedGroups, tryGetCheckIfEntered, updateScienceGroupData } from '../../store/scienceGroupDataSlice';
 import { useSelector, useDispatch } from 'react-redux';
 import { Modal, Chip, Divider, Button, Box, Container, List, ListItem, IconButton, ListItemText } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
@@ -11,7 +11,9 @@ export default function Hub() {
   const is_updated_available_groups = useSelector((state) => state.scienceGroupData.is_updated_available_groups);
   const participated_groups = useSelector((state) => state.scienceGroupData.participated_groups);
   const is_updated_participated_groups = useSelector((state) => state.scienceGroupData.is_updated_participated_groups);
-  
+  const is_have_to_update_science_group_data = useSelector((state) => state.userData.is_have_to_update_science_group_data);
+
+
   dispatch(tryGetCheckIfEntered({}));
 
   if (!is_updated_available_groups)
@@ -19,6 +21,11 @@ export default function Hub() {
 
   if (!is_updated_participated_groups)
     dispatch(tryGetParticipatedGroups({}));
+
+  if (is_have_to_update_science_group_data) {
+    dispatch(updateScienceGroupData({}));
+    dispatch(updatedScienceGroupData({}));
+  }
 
   return (
     <Modal
@@ -91,7 +98,7 @@ export default function Hub() {
               dispatch(tryGetAvailableGroups({}))
             }}
           >
-            <ReplayIcon/>
+            <ReplayIcon />
           </IconButton>
 
 
@@ -131,7 +138,7 @@ export default function Hub() {
               dispatch(tryGetParticipatedGroups({}))
             }}
           >
-            <ReplayIcon/>
+            <ReplayIcon />
           </IconButton>
 
         </Box>

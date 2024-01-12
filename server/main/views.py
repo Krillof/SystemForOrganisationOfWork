@@ -139,9 +139,12 @@ def science_group_get_available_groups(request): # +
 
     try:
         user = User.nodes.get(token=token)
-        # TODO : don't show groups where user already in
         try:
             data = list(map(lambda t: [t.title, t.get_id()], ScienceGroup.nodes.all()))
+            user_groups_ids = []
+            for science_group in user.science_groups:
+                user_groups_ids.append(science_group.get_id())
+            data = list(filter(lambda t: t[1] not in user_groups_ids, data))
         except Exception as ex:
             message = str(ex)
     except Exception as ex:
@@ -159,10 +162,16 @@ def science_group_send_membership_request(request): # +
     try:
         user = User.nodes.get(token=token)
         try:
-            science_group = ScienceGroup.nodes.get(uid=science_group_id)
-            MembershipRequest(user=user, science_group=science_group).save()
-        except:
-            message="Error on server"
+            science_group = db.cypher_query("MATCH (a:ScienceGroup) WHERE id(a) = " + science_group_id + " return a", resolve_objects=True)[0][0][0]
+            is_make_membership_request = True
+            for membership_request in science_group.membership_requests:
+                if membership_request.user.single().get_id() == user.get_id():
+                    is_make_membership_request = False
+            if is_make_membership_request:
+                science_group.make_membership_request(user)
+        except Exception as ex:
+            #message="Error on server"
+            message = str(ex)
     except:
         message="User not logined"
     return default_response(message)
@@ -172,16 +181,23 @@ def science_group_get_membership_requests(request): # +-
     message = ""
     data = None
     token = request.POST["token"]
-    science_group_id = request.POST["science_group_id"]
 
     try:
         user = User.nodes.get(token=token)
         try:
-            science_group = ScienceGroup.nodes.get(uid=science_group_id)
-            user_role = user.science_groups.relationship(science_group).role
-            if Role.Owner == user_role:
-                # data = list(MembershipRequest.nodes.get(science_group=science_group))
-                message = list(MembershipRequest.nodes.get(science_group=science_group)) # TODO: checking
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                user_role = user.science_groups.relationship(current_science_group).role
+                if Role.Owner.value == user_role:
+                    #data = list(MembershipRequest.nodes.get(science_group=current_science_group))
+                    data = []
+                    for membership_request in current_science_group.membership_requests:
+                        if (not membership_request.is_accepted) or (not membership_request.is_aborted):
+                            data.append([membership_request.get_id(), membership_request.user.single().login])
+                else:
+                    message="You must have to be owner"
+            else:
+                data = None
         except:
             message="Error on server"
     except:
@@ -191,19 +207,20 @@ def science_group_get_membership_requests(request): # +-
 @api_view(['POST'])
 def science_group_accept_membership_request(request): # +-
     message = ""
-    user_id = request.POST["user_id"]
+    memberhip_request_id = request.POST["memberhip_request_id"]
     token = request.POST["token"]
-    science_group_id = request.POST["science_group_id"]
 
     try:
         user = User.nodes.get(token=token)
-        science_group = ScienceGroup.nodes.get(uid=science_group_id)
         try:
-            q = db.cypher_query("MATCH p=(u:User WHERE ID(u)=" + user_id + ")<-[:FROM]-(:MembershipRequest)-[:TO]->(g:ScienceGroup WHERE ID(g)=" + science_group.uid + " ) RETURN p LIMIT 1",
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                q = db.cypher_query("MATCH p=(u:User WHERE ID(u)=" + user.get_id() + ")<-[:FROM]-(:MembershipRequest)-[:TO]->(g:ScienceGroup WHERE ID(g)=" + current_science_group.get_id() + " ) RETURN p LIMIT 1",
                     resolve_objects = True) # TODO: check it on client and understand structure
-            path_query = q[0][0][0]
-            user.connect_and_write_role(science_group, Role.Employee)
-            message = str(path_query) # Just cheking...
+                path_query = q[0][0][0]
+                user.connect_and_write_role(current_science_group, Role.Employee)
+            else:
+                data = None
         except:
             message="Error on server"
     except:
@@ -273,7 +290,9 @@ def science_group_leave(request): # +
 
     try:
         user = User.nodes.get(token=token)
-        # user.current_science_group = None ? TODO: 
+        current_science_group = user.current_science_group.single()
+        if current_science_group:
+            user.current_science_group.disconnect(current_science_group)
         user.save()
     except:
         message="User not logined"
@@ -310,3 +329,142 @@ def workspace_update_mindmap(request):
         message= str(ex)
     return default_response(message, data)
 
+@api_view(['POST'])
+def workspace_create_global_theme_vertex(request):
+    message = ""
+    data = None
+    token = request.POST["token"]
+    name = request.POST["name"]
+
+    try:
+        user = User.nodes.get(token=token)
+        try:
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                user_role = user.science_groups.relationship(current_science_group).role
+                if Role.Owner.value == user_role:
+                    global_theme_vertex = GlobalTheme(title=name, x=0, y=0).save()
+                    current_science_group.add_global_theme(global_theme_vertex)
+                else:
+                    message="You must be owner"
+            else:
+                data = None
+        except:
+            message="Error on server"
+    except:
+        message="User not logined"
+    return default_response(message, data)
+
+@api_view(['POST'])
+def workspace_create_task_vertex(request):
+    message = ""
+    data = None
+    token = request.POST["token"]
+    name = request.POST["name"]
+    parent_id = request.POST["parentId"]
+
+    try:
+        user = User.nodes.get(token=token)
+        try:
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                user_role = user.science_groups.relationship(current_science_group).role
+                if Role.Owner.value == user_role:
+                    global_theme_vertex = db.cypher_query("MATCH (a:GlobalTheme) WHERE id(a) = " + parent_id + " return a", resolve_objects=True)[0][0][0]
+                    task_vertex = Task(title=name, x=0, y=0).save()
+                    global_theme_vertex.add_task(task_vertex)
+                else:
+                    message="You must be owner"
+            else:
+                data = None
+        except Exception as ex:
+            #message="Error on server"
+            message=str(ex)
+    except:
+        message="User not logined"
+    return default_response(message, data)
+
+@api_view(['POST'])
+def workspace_create_article_vertex(request):
+    message = ""
+    data = None
+    token = request.POST["token"]
+    name = request.POST["name"]
+    parent_id = request.POST["parentId"]
+    doi = request.POST["doi"]
+
+    try:
+        user = User.nodes.get(token=token)
+        try:
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                user_role = user.science_groups.relationship(current_science_group).role
+                if Role.Owner.value == user_role:
+                    task_vertex = db.cypher_query("MATCH (a:Task) WHERE id(a) = " + parent_id + " return a", resolve_objects=True)[0][0][0]
+                    article_vertex = Article(name=name, doi=doi, x=0, y=0).save()
+                    task_vertex.add_article(article_vertex)
+                else:
+                    message="You must be owner"
+            else:
+                data = None
+        except:
+            message="Error on server"
+    except:
+        message="User not logined"
+    return default_response(message, data)
+
+@api_view(['POST'])
+def workspace_get_article_data(request):
+    message = ""
+    data = None
+    token = request.POST["token"]
+    id = request.POST["id"]
+
+    try:
+        user = User.nodes.get(token=token)
+        try:
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                article_vertex = db.cypher_query("MATCH (a:Article) WHERE id(a) = " + id + " return a", resolve_objects=True)[0][0][0]
+                article_data = article_vertex.get_article_data()
+                data = {
+                   "citations": article_data.citations_number,
+                    "accesses": article_data.accesses_number,
+                }
+            else:
+                data = None
+        except Exception as ex:
+            #message="Error on server"
+            message=str(ex)
+    except:
+        message="User not logined"
+    return default_response(message, data)
+
+@api_view(['POST'])
+def workspace_delete_vertex(request):
+    message = ""
+    data = None
+    token = request.POST["token"]
+    workspace_type = request.POST["workspace_type"]
+    id = request.POST["id"]
+
+    try:
+        user = User.nodes.get(token=token)
+        try:
+            current_science_group = user.current_science_group.single()
+            if current_science_group:
+                user_role = user.science_groups.relationship(current_science_group).role
+                if Role.Owner.value == user_role:
+                    nodes = get_node_and_its_children_by_type_and_id(workspace_type, id)
+                    for node in nodes:
+                        node.delete()
+                else:
+                    message="You must be owner"
+            else:
+                data = None
+        except Exception as ex:
+            #message="Error on server"
+            message=str(ex)
+    except:
+        message="User not logined"
+    return default_response(message, data)

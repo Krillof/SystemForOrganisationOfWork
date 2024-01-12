@@ -31,6 +31,8 @@ class MainConfig(AppConfig):
             sci_group.add_new_user(joshua, Role.Owner)
             caroline = User(login="caroline123", password="123").save()
             sci_group.add_new_user(caroline)
+            mark = User(login="Mark", password="123").save()
+            sci_group.make_membership_request(mark)
             gt1 = GlobalTheme(title="Global theme 1", x=400, y=0).save()
             sci_group.add_global_theme(gt1)
             t1 = Task(title="Task 1", x=600, y=0).save()
@@ -39,7 +41,8 @@ class MainConfig(AppConfig):
             t2 = Task(title="Task 2", x=600, y=100).save()
             t2.refresh()
             gt1.add_task(t2)
-            art1 = Article(doi="https://doi.org/10.3390/membranes13050503", citations=100, accesses=500, x=800, y=100).save()
+            #art1 = Article(doi="https://doi.org/10.3390/membranes13050503", name="Some name", citations=100, accesses=500, x=800, y=100).save()
+            art1 = Article(doi="", name="Some name", citations=100, accesses=500, x=800, y=100).save()
             art1.refresh()
             t2.add_article(art1)
 

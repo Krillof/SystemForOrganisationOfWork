@@ -12,7 +12,7 @@ export default function Entrance() {
   const passwordRef = useRef("");
 
   dispatch(trySetCurrentLogin());
-  
+
 
   return (
     <Modal

@@ -58,7 +58,7 @@ function Select({ value, handleId, nodeId }) {
   );
 }
 
-function CustomNode({ id, data }) {
+function SimpleNode({ id, data }) {
   return (
     <>
       <div className="custom-node__header">
@@ -73,4 +73,4 @@ function CustomNode({ id, data }) {
   );
 }
 
-export default memo(CustomNode);
+export default memo(SimpleNode);
