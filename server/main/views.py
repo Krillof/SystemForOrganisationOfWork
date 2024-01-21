@@ -207,7 +207,7 @@ def science_group_get_membership_requests(request): # +-
 @api_view(['POST'])
 def science_group_accept_membership_request(request): # +-
     message = ""
-    memberhip_request_id = request.POST["memberhip_request_id"]
+    membership_request_id = request.POST["membership_request_id"]
     token = request.POST["token"]
 
     try:
@@ -215,14 +215,13 @@ def science_group_accept_membership_request(request): # +-
         try:
             current_science_group = user.current_science_group.single()
             if current_science_group:
-                q = db.cypher_query("MATCH p=(u:User WHERE ID(u)=" + user.get_id() + ")<-[:FROM]-(:MembershipRequest)-[:TO]->(g:ScienceGroup WHERE ID(g)=" + current_science_group.get_id() + " ) RETURN p LIMIT 1",
-                    resolve_objects = True) # TODO: check it on client and understand structure
-                path_query = q[0][0][0]
-                user.connect_and_write_role(current_science_group, Role.Employee)
+                membership_request = db.cypher_query("MATCH (u:MembershipRequest) WHERE ID(u)=" + membership_request_id + " RETURN u", resolve_objects = True)[0][0][0]
+                current_science_group.add_new_user(membership_request.user.single(), Role.Employee)
             else:
                 data = None
-        except:
-            message="Error on server"
+        except Exception as ex:
+            #message="Error on server"
+            message=str(ex)
     except:
         message="User not logined"
     return default_response(message)

@@ -36,7 +36,7 @@ export default function ArticleModalContent() {
         variant="contained"
         onClick={() => {
           dispatch(tryCreateArticleVertex({
-            doi: doiRef.current.valueOf,
+            doi: doiRef.current.value,
             name: nameRef.current.value,
             parentId: current_modal_parent_id,
           }))

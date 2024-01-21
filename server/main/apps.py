@@ -42,7 +42,7 @@ class MainConfig(AppConfig):
             t2.refresh()
             gt1.add_task(t2)
             #art1 = Article(doi="https://doi.org/10.3390/membranes13050503", name="Some name", citations=100, accesses=500, x=800, y=100).save()
-            art1 = Article(doi="", name="Some name", citations=100, accesses=500, x=800, y=100).save()
+            art1 = Article(doi="https://doi.org/10.1007/s10404-023-02642-7", name="Some name", citations=100, accesses=500, x=800, y=100).save()
             art1.refresh()
             t2.add_article(art1)
 

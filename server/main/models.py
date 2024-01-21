@@ -108,10 +108,11 @@ class ScienceGroup(StructuredNode):
   def make_membership_request(self, user):
     membership_request = MembershipRequest().save()
     membership_request.user.connect(user).save()
-    rel_science_group = self.membership_requests.connect(membership_request) # I don't know why you must not save here...
-    rel_membership_request = membership_request.science_group.connect(self) # And not save here...
+    rel_science_group = self.membership_requests.connect(membership_request)
+    rel_membership_request = membership_request.science_group.connect(self) 
     self.save()
     user.save()
+    membership_request.save()
 
   def add_new_user(self, user_node, role=Role.Employee):
     rel_science_group = self.users.connect(user_node)
@@ -245,9 +246,6 @@ class Article(PositionedNodeFlattened):
     return data
   
   def flatten(self):
-
-    
-
     try:
       #article_data = self.get_article_data()
       #"citations" : article_data.citations_number, 

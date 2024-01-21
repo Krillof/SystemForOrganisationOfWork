@@ -298,8 +298,9 @@ export const scienceGroupDataSlice = createSlice({
       // When loading do something
     },
     [tryAcceptMembershipRequest.fulfilled]: (state, { payload }) => {
+      console.log(payload);
       if (payload.message == "") {
-        // nothing
+        state.is_have_to_update_gotten_requests_for_membership = true;
       } else {
         console.log(payload.message);
       }

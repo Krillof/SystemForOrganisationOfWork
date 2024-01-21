@@ -1,12 +1,12 @@
 from requests_html import HTMLSession
+from functools import reduce
 import sys
 
 def springer_link_handler(session, answer):
   second_answer = session.get(answer.url + "/metrics")
-
-  dls = second_answer.html.find("dl.c-article-metrics__access-citation")
-  citations = int(dls[1].find("dt")[0].text) + int(dls[2].find("dt")[0].text)
-  accesses = int(dls[0].find("dt")[0].text)
+  spans = second_answer.html.find("span.app-article-metrics-stat__item")
+  accesses = int(reduce(lambda x,y: (x+y) if y.isdigit() else x , spans[0].text))
+  citations = int(reduce(lambda x,y: (x+y) if y.isdigit() else x , spans[1].text))
 
   return citations, accesses
 
